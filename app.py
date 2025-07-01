@@ -3,36 +3,33 @@ import streamlit as st
 import tempfile
 from resume_parser import parse_resume
 from scorer import fuzzy_skill_match, semantic_skill_match
-from feedback import generate_feedback, get_hf_pipeline
-from dotenv import load_dotenv
+from feedback import generate_feedback
+import google.generativeai as genai
 import json
-import re
 
-load_dotenv()
 st.set_page_config(page_title="martResumeScan - AI Resume Screening", layout="centered")
 st.title("martResumeScan :mag_right:")
 st.write("AI-powered resume screening and feedback tool.")
+
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-pro")
 
 uploaded_file = st.file_uploader("Upload Resume (PDF or DOCX)", type=["pdf", "docx"])
 jd = st.text_area("Paste Job Description", height=200)
 
 def extract_resume_info(raw_text):
     prompt = f'''Extract the following from the resume text below. Return as JSON with keys: skills (list), education (string), experience (string).\nResume Text:\n{raw_text}\n'''
-    pipe = get_hf_pipeline()
-    result = pipe(prompt, max_new_tokens=512, do_sample=True)
+    response = model.generate_content(prompt)
     try:
-        json_str = re.search(r'\{.*\}', result[0]['generated_text'], re.DOTALL).group(0)
-        return json.loads(json_str)
+        return json.loads(response.text)
     except Exception:
         return {'skills': [], 'education': '', 'experience': ''}
 
 def extract_jd_skills(jd):
     prompt = f'''Extract a list of required skills from the following job description. Return as a Python list.\nJob Description:\n{jd}\n'''
-    pipe = get_hf_pipeline()
-    result = pipe(prompt, max_new_tokens=256, do_sample=True)
+    response = model.generate_content(prompt)
     try:
-        list_str = re.search(r'\[.*\]', result[0]['generated_text'], re.DOTALL).group(0)
-        return json.loads(list_str)
+        return json.loads(response.text)
     except Exception:
         return []
 
@@ -45,7 +42,7 @@ if uploaded_file and jd:
     st.subheader("Extracted Candidate Details")
     st.write(f"**Name:** {parsed.get('name', 'N/A')}")
     st.write(f"**Email:** {parsed.get('email', 'N/A')}")
-    # Use Hugging Face LLM to extract skills, education, experience
+    # Use Gemini to extract skills, education, experience
     extracted = extract_resume_info(parsed['raw_text'])
     st.write(f"**Skills:** {', '.join(extracted.get('skills', []))}")
     st.write(f"**Education:** {extracted.get('education', '')}")
