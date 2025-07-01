@@ -1,6 +1,13 @@
+import os
+
+# --- Google Service Account Credentials for Streamlit Cloud ---
+if "GOOGLE_APPLICATION_CREDENTIALS_JSON" in os.environ:
+    with open("/tmp/gcp-sa.json", "w") as f:
+        f.write(os.environ["GOOGLE_APPLICATION_CREDENTIALS_JSON"])
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/gcp-sa.json"
+
 import streamlit as st
 import tempfile
-import os
 from resume_parser import parse_resume
 from scorer import fuzzy_skill_match, semantic_skill_match
 from feedback import generate_feedback
