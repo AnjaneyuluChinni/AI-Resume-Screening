@@ -1,0 +1,11 @@
+streamlit
+langchain
+openai
+pdfplumber
+python-docx
+fuzzywuzzy
+sentence-transformers
+python-dotenv 
+pi-heif
+unstructured_inference
+pdf2image
