@@ -1,9 +1,9 @@
-from langchain_community.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatGroq
 from langchain.prompts import ChatPromptTemplate
 import os
 from dotenv import load_dotenv
 load_dotenv()
-llm = ChatOpenAI(temperature=0.3, openai_api_key=os.getenv('OPENAI_API_KEY'))
+llm = ChatGroq(groq_api_key=os.getenv('GROQ_API_KEY'), model="mixtral-8x7b-32768")
 
 SUGGESTION_PROMPT = """
 You are an expert career coach. Given the following candidate details and job description, provide:
