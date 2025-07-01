@@ -4,7 +4,7 @@ import os
 from resume_parser import parse_resume
 from scorer import fuzzy_skill_match, semantic_skill_match
 from feedback import generate_feedback
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 import openai
 from dotenv import load_dotenv
