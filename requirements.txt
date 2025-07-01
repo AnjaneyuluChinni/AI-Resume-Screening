@@ -6,4 +6,4 @@ python-docx
 fuzzywuzzy
 sentence-transformers
 python-dotenv
-groq
+google-cloud-aiplatform
