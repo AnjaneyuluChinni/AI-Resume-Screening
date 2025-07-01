@@ -1,15 +1,11 @@
 import os
+from transformers import pipeline
 
-# --- Google Service Account Credentials for Streamlit Cloud ---
-if "GOOGLE_APPLICATION_CREDENTIALS_JSON" in os.environ:
-    with open("/tmp/gcp-sa.json", "w") as f:
-        f.write(os.environ["GOOGLE_APPLICATION_CREDENTIALS_JSON"])
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/gcp-sa.json"
-
-from dotenv import load_dotenv
-from langchain_google_vertexai import ChatVertexAI
-
-load_dotenv()
+def get_hf_pipeline():
+    # You can change the model to any supported chat/completion model
+    model_id = "meta-llama/Llama-2-7b-chat-hf"
+    hf_token = os.getenv("HF_TOKEN")
+    return pipeline("text-generation", model=model_id, token=hf_token)
 
 def generate_feedback(candidate, job_description, missing_skills):
     prompt = f"""
@@ -28,5 +24,6 @@ Experience: {candidate.get('experience', '')}
 Job Description:
 {job_description}
 """
-    llm = ChatVertexAI(model="gemini-1.5-pro-preview-0409", project=os.getenv("GCP_PROJECT"), location=os.getenv("GCP_LOCATION", "us-central1"))
-    return llm.invoke(prompt)
+    pipe = get_hf_pipeline()
+    result = pipe(prompt, max_new_tokens=512, do_sample=True)
+    return result[0]['generated_text']
