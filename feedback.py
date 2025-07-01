@@ -3,7 +3,7 @@ from transformers import pipeline
 
 def get_hf_pipeline():
     # You can change the model to any supported chat/completion model
-    model_id = "meta-llama/Llama-2-7b-chat-hf"
+    model_id = "HuggingFaceH4/zephyr-7b-beta"
     hf_token = os.getenv("HF_TOKEN")
     return pipeline("text-generation", model=model_id, token=hf_token)
 
