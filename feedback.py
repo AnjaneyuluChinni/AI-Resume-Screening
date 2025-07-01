@@ -1,11 +1,10 @@
 import os
 from dotenv import load_dotenv
-from groq import Groq
+from google.cloud import aiplatform
 
 load_dotenv()
 
 def generate_feedback(candidate, job_description, missing_skills):
-    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     prompt = f"""
 You are an expert career coach. Given the following candidate details and job description, provide:
 - A brief summary of the candidate's fit
@@ -22,11 +21,14 @@ Experience: {candidate.get('experience', '')}
 Job Description:
 {job_description}
 """
-    response = client.chat.completions.create(
-        model="mixtral-8x7b-32768",
-        messages=[
-            {"role": "system", "content": "You are an expert career coach."},
-            {"role": "user", "content": prompt}
-        ]
+    # Set your project and location
+    project = os.getenv("GCP_PROJECT")
+    location = os.getenv("GCP_LOCATION", "us-central1")
+    model = "gemini-1.5-pro-preview-0409"  # or the latest available
+
+    aiplatform.init(project=project, location=location)
+    endpoint = aiplatform.Endpoint(
+        endpoint_name=f"projects/{project}/locations/{location}/publishers/google/models/{model}"
     )
-    return response.choices[0].message.content 
+    response = endpoint.predict(instances=[{"content": prompt}])
+    return response.predictions[0]['content']
