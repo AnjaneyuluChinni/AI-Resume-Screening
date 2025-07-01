@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from google.cloud import aiplatform
+from langchain_google_vertexai import ChatVertexAI
 
 load_dotenv()
 
@@ -21,14 +21,5 @@ Experience: {candidate.get('experience', '')}
 Job Description:
 {job_description}
 """
-    # Set your project and location
-    project = os.getenv("GCP_PROJECT")
-    location = os.getenv("GCP_LOCATION", "us-central1")
-    model = "gemini-1.5-pro-preview-0409"  # or the latest available
-
-    aiplatform.init(project=project, location=location)
-    endpoint = aiplatform.Endpoint(
-        endpoint_name=f"projects/{project}/locations/{location}/publishers/google/models/{model}"
-    )
-    response = endpoint.predict(instances=[{"content": prompt}])
-    return response.predictions[0]['content']
+    llm = ChatVertexAI(model="gemini-1.5-pro-preview-0409")
+    return llm.invoke(prompt)
