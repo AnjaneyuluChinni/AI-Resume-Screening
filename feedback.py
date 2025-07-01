@@ -1,13 +1,9 @@
 import os
-from transformers import pipeline
-
-def get_hf_pipeline():
-    # You can change the model to any supported chat/completion model
-    model_id = "HuggingFaceH4/zephyr-7b-beta"
-    hf_token = os.getenv("HF_TOKEN")
-    return pipeline("text-generation", model=model_id, token=hf_token)
+import google.generativeai as genai
 
 def generate_feedback(candidate, job_description, missing_skills):
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+    model = genai.GenerativeModel("gemini-1.5-flash")
     prompt = f"""
 You are an expert career coach. Given the following candidate details and job description, provide:
 - A brief summary of the candidate's fit
@@ -24,6 +20,5 @@ Experience: {candidate.get('experience', '')}
 Job Description:
 {job_description}
 """
-    pipe = get_hf_pipeline()
-    result = pipe(prompt, max_new_tokens=512, do_sample=True)
-    return result[0]['generated_text']
+    response = model.generate_content(prompt)
+    return response.text
