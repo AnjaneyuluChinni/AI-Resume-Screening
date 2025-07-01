@@ -4,9 +4,8 @@ import os
 from resume_parser import parse_resume
 from scorer import fuzzy_skill_match, semantic_skill_match
 from feedback import generate_feedback
-from langchain_community.chat_models import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
-import openai
+from langchain_community.chat_models import ChatGroq
+from langchain.prompts import ChatPromptTemplate    
 from dotenv import load_dotenv
 load_dotenv()
 st.set_page_config(page_title="martResumeScan - AI Resume Screening", layout="centered")
@@ -15,6 +14,9 @@ st.write("AI-powered resume screening and feedback tool.")
 
 uploaded_file = st.file_uploader("Upload Resume (PDF or DOCX)", type=["pdf", "docx"])
 jd = st.text_area("Paste Job Description", height=200)
+
+groq_api_key = os.getenv('GROQ_API_KEY')
+llm = ChatGroq(groq_api_key=groq_api_key, model="mixtral-8x7b-32768")
 
 if uploaded_file and jd:
     with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[-1]) as tmp_file:
@@ -26,7 +28,6 @@ if uploaded_file and jd:
     st.write(f"**Name:** {parsed.get('name', 'N/A')}")
     st.write(f"**Email:** {parsed.get('email', 'N/A')}")
     # Use LLM to extract skills, education, experience
-    llm = ChatOpenAI(temperature=0, openai_api_key=os.getenv('OPENAI_API_KEY'))
     extraction_prompt = ChatPromptTemplate.from_template('''Extract the following from the resume text below. Return as JSON with keys: skills (list), education (string), experience (string).\nResume Text:\n{resume_text}\n''')
     chain = extraction_prompt | llm
     extraction = chain.invoke({'resume_text': parsed['raw_text']})
