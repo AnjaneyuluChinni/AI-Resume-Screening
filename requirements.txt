@@ -1,8 +1,6 @@
 streamlit
-langchain
-langchain-google-vertexai
-google-cloud-aiplatform
-openai
+transformers
+huggingface_hub
 pdfplumber
 python-docx
 fuzzywuzzy
