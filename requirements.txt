@@ -4,6 +4,7 @@ openai
 pdfplumber
 python-docx
 fuzzywuzzy
+unstructured
 sentence-transformers
 python-dotenv 
 pi-heif
