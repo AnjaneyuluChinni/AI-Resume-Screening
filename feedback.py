@@ -21,5 +21,5 @@ Experience: {candidate.get('experience', '')}
 Job Description:
 {job_description}
 """
-    llm = ChatVertexAI(model="gemini-1.5-pro-preview-0409")
+    llm = ChatVertexAI(model="gemini-1.5-pro-preview-0409", project=os.getenv("GCP_PROJECT"), location=os.getenv("GCP_LOCATION", "us-central1"))
     return llm.invoke(prompt)
