@@ -1,9 +1,10 @@
 streamlit
 langchain
+langchain-google-vertexai
+google-cloud-aiplatform
 openai
 pdfplumber
 python-docx
 fuzzywuzzy
 sentence-transformers
 python-dotenv
-google-cloud-aiplatform
