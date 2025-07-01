@@ -8,11 +8,6 @@ from dotenv import load_dotenv
 from langchain_google_vertexai import ChatVertexAI
 import json
 
-# Write the JSON from the secret to a file and set the env variable
-if "GOOGLE_APPLICATION_CREDENTIALS_JSON" in os.environ:
-    with open("/tmp/gcp-sa.json", "w") as f:
-        f.write(os.environ["GOOGLE_APPLICATION_CREDENTIALS_JSON"])
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/gcp-sa.json"
 load_dotenv()
 st.set_page_config(page_title="martResumeScan - AI Resume Screening", layout="centered")
 st.title("martResumeScan :mag_right:")
@@ -21,7 +16,9 @@ st.write("AI-powered resume screening and feedback tool.")
 uploaded_file = st.file_uploader("Upload Resume (PDF or DOCX)", type=["pdf", "docx"])
 jd = st.text_area("Paste Job Description", height=200)
 
-llm = ChatVertexAI(model="gemini-1.5-pro-preview-0409")
+gcp_project = os.getenv("GCP_PROJECT")
+gcp_location = os.getenv("GCP_LOCATION", "us-central1")
+llm = ChatVertexAI(model="gemini-1.5-pro-preview-0409", project=gcp_project, location=gcp_location)
 
 if uploaded_file and jd:
     with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[-1]) as tmp_file:
