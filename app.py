@@ -1,19 +1,12 @@
 import os
-
-# --- Google Service Account Credentials for Streamlit Cloud ---
-if "GOOGLE_APPLICATION_CREDENTIALS_JSON" in os.environ:
-    with open("/tmp/gcp-sa.json", "w") as f:
-        f.write(os.environ["GOOGLE_APPLICATION_CREDENTIALS_JSON"])
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/gcp-sa.json"
-
 import streamlit as st
 import tempfile
 from resume_parser import parse_resume
 from scorer import fuzzy_skill_match, semantic_skill_match
-from feedback import generate_feedback
+from feedback import generate_feedback, get_hf_pipeline
 from dotenv import load_dotenv
-from langchain_google_vertexai import ChatVertexAI
 import json
+import re
 
 load_dotenv()
 st.set_page_config(page_title="martResumeScan - AI Resume Screening", layout="centered")
@@ -23,9 +16,25 @@ st.write("AI-powered resume screening and feedback tool.")
 uploaded_file = st.file_uploader("Upload Resume (PDF or DOCX)", type=["pdf", "docx"])
 jd = st.text_area("Paste Job Description", height=200)
 
-gcp_project = os.getenv("GCP_PROJECT")
-gcp_location = os.getenv("GCP_LOCATION", "us-central1")
-llm = ChatVertexAI(model="gemini-1.5-pro-preview-0409", project=gcp_project, location=gcp_location)
+def extract_resume_info(raw_text):
+    prompt = f'''Extract the following from the resume text below. Return as JSON with keys: skills (list), education (string), experience (string).\nResume Text:\n{raw_text}\n'''
+    pipe = get_hf_pipeline()
+    result = pipe(prompt, max_new_tokens=512, do_sample=True)
+    try:
+        json_str = re.search(r'\{.*\}', result[0]['generated_text'], re.DOTALL).group(0)
+        return json.loads(json_str)
+    except Exception:
+        return {'skills': [], 'education': '', 'experience': ''}
+
+def extract_jd_skills(jd):
+    prompt = f'''Extract a list of required skills from the following job description. Return as a Python list.\nJob Description:\n{jd}\n'''
+    pipe = get_hf_pipeline()
+    result = pipe(prompt, max_new_tokens=256, do_sample=True)
+    try:
+        list_str = re.search(r'\[.*\]', result[0]['generated_text'], re.DOTALL).group(0)
+        return json.loads(list_str)
+    except Exception:
+        return []
 
 if uploaded_file and jd:
     with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[-1]) as tmp_file:
@@ -36,26 +45,15 @@ if uploaded_file and jd:
     st.subheader("Extracted Candidate Details")
     st.write(f"**Name:** {parsed.get('name', 'N/A')}")
     st.write(f"**Email:** {parsed.get('email', 'N/A')}")
-    # Use Gemini to extract skills, education, experience
-    extraction_prompt = f'''Extract the following from the resume text below. Return as JSON with keys: skills (list), education (string), experience (string).\nResume Text:\n{parsed['raw_text']}\n'''
-    extraction_content = llm.invoke(extraction_prompt)
-    try:
-        extracted = json.loads(extraction_content)
-    except Exception:
-        extracted = {'skills': [], 'education': '', 'experience': ''}
+    # Use Hugging Face LLM to extract skills, education, experience
+    extracted = extract_resume_info(parsed['raw_text'])
     st.write(f"**Skills:** {', '.join(extracted.get('skills', []))}")
     st.write(f"**Education:** {extracted.get('education', '')}")
     st.write(f"**Experience:** {extracted.get('experience', '')}")
     # Skill matching
     jd_skills = [s.strip() for s in st.text_input("Comma-separated required skills (optional, for better matching)").split(',') if s.strip()]
     if not jd_skills:
-        # Try to extract skills from JD using Gemini
-        skill_prompt = f'''Extract a list of required skills from the following job description. Return as a Python list.\nJob Description:\n{jd}\n'''
-        skill_content = llm.invoke(skill_prompt)
-        try:
-            jd_skills = json.loads(skill_content)
-        except Exception:
-            jd_skills = []
+        jd_skills = extract_jd_skills(jd)
     st.write(f"**Job Skills:** {', '.join(jd_skills)}")
     # Scoring
     score, matched, missing = fuzzy_skill_match(extracted.get('skills', []), jd_skills)
