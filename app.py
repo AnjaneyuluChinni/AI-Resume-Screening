@@ -4,9 +4,10 @@ import os
 from resume_parser import parse_resume
 from scorer import fuzzy_skill_match, semantic_skill_match
 from feedback import generate_feedback
-from langchain_community.chat_models import ChatGroq
-from langchain.prompts import ChatPromptTemplate    
 from dotenv import load_dotenv
+from groq import Groq
+import json
+
 load_dotenv()
 st.set_page_config(page_title="martResumeScan - AI Resume Screening", layout="centered")
 st.title("martResumeScan :mag_right:")
@@ -16,7 +17,7 @@ uploaded_file = st.file_uploader("Upload Resume (PDF or DOCX)", type=["pdf", "do
 jd = st.text_area("Paste Job Description", height=200)
 
 groq_api_key = os.getenv('GROQ_API_KEY')
-llm = ChatGroq(groq_api_key=groq_api_key, model="mixtral-8x7b-32768")
+client = Groq(api_key=groq_api_key)
 
 if uploaded_file and jd:
     with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[-1]) as tmp_file:
@@ -27,13 +28,17 @@ if uploaded_file and jd:
     st.subheader("Extracted Candidate Details")
     st.write(f"**Name:** {parsed.get('name', 'N/A')}")
     st.write(f"**Email:** {parsed.get('email', 'N/A')}")
-    # Use LLM to extract skills, education, experience
-    extraction_prompt = ChatPromptTemplate.from_template('''Extract the following from the resume text below. Return as JSON with keys: skills (list), education (string), experience (string).\nResume Text:\n{resume_text}\n''')
-    chain = extraction_prompt | llm
-    extraction = chain.invoke({'resume_text': parsed['raw_text']})
-    import json
+    # Use Groq LLM to extract skills, education, experience
+    extraction_prompt = f'''Extract the following from the resume text below. Return as JSON with keys: skills (list), education (string), experience (string).\nResume Text:\n{parsed['raw_text']}\n'''
+    response = client.chat.completions.create(
+        model="mixtral-8x7b-32768",
+        messages=[
+            {"role": "system", "content": "You are an expert resume parser."},
+            {"role": "user", "content": extraction_prompt}
+        ]
+    )
     try:
-        extracted = json.loads(extraction.content)
+        extracted = json.loads(response.choices[0].message.content)
     except Exception:
         extracted = {'skills': [], 'education': '', 'experience': ''}
     st.write(f"**Skills:** {', '.join(extracted.get('skills', []))}")
@@ -42,12 +47,17 @@ if uploaded_file and jd:
     # Skill matching
     jd_skills = [s.strip() for s in st.text_input("Comma-separated required skills (optional, for better matching)").split(',') if s.strip()]
     if not jd_skills:
-        # Try to extract skills from JD using LLM
-        skill_prompt = ChatPromptTemplate.from_template('''Extract a list of required skills from the following job description. Return as a Python list.\nJob Description:\n{jd}\n''')
-        skill_chain = skill_prompt | llm
-        skill_extraction = skill_chain.invoke({'jd': jd})
+        # Try to extract skills from JD using Groq LLM
+        skill_prompt = f'''Extract a list of required skills from the following job description. Return as a Python list.\nJob Description:\n{jd}\n'''
+        skill_response = client.chat.completions.create(
+            model="mixtral-8x7b-32768",
+            messages=[
+                {"role": "system", "content": "You are an expert resume parser."},
+                {"role": "user", "content": skill_prompt}
+            ]
+        )
         try:
-            jd_skills = json.loads(skill_extraction.content)
+            jd_skills = json.loads(skill_response.choices[0].message.content)
         except Exception:
             jd_skills = []
     st.write(f"**Job Skills:** {', '.join(jd_skills)}")
