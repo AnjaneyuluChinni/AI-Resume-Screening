@@ -6,3 +6,4 @@ python-docx
 fuzzywuzzy
 sentence-transformers
 python-dotenv
+python-Levenshtein
