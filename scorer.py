@@ -1,7 +1,8 @@
 from fuzzywuzzy import fuzz
 from sentence_transformers import SentenceTransformer, util
+import os
 
-model = SentenceTransformer('all-MiniLM-L6-v2')
+model = SentenceTransformer('all-MiniLM-L6-v2', use_auth_token=os.getenv("HF_TOKEN"))
 
 def fuzzy_skill_match(resume_skills, jd_skills):
     matched = []
