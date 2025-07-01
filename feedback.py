@@ -1,4 +1,11 @@
 import os
+
+# --- Google Service Account Credentials for Streamlit Cloud ---
+if "GOOGLE_APPLICATION_CREDENTIALS_JSON" in os.environ:
+    with open("/tmp/gcp-sa.json", "w") as f:
+        f.write(os.environ["GOOGLE_APPLICATION_CREDENTIALS_JSON"])
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/gcp-sa.json"
+
 from dotenv import load_dotenv
 from langchain_google_vertexai import ChatVertexAI
 
