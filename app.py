@@ -8,6 +8,11 @@ from dotenv import load_dotenv
 from langchain_google_vertexai import ChatVertexAI
 import json
 
+# Write the JSON from the secret to a file and set the env variable
+if "GOOGLE_APPLICATION_CREDENTIALS_JSON" in os.environ:
+    with open("/tmp/gcp-sa.json", "w") as f:
+        f.write(os.environ["GOOGLE_APPLICATION_CREDENTIALS_JSON"])
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/gcp-sa.json"
 load_dotenv()
 st.set_page_config(page_title="martResumeScan - AI Resume Screening", layout="centered")
 st.title("martResumeScan :mag_right:")
