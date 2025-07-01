@@ -5,7 +5,7 @@ from resume_parser import parse_resume
 from scorer import fuzzy_skill_match, semantic_skill_match
 from feedback import generate_feedback
 from dotenv import load_dotenv
-from google.cloud import aiplatform
+from langchain_google_vertexai import ChatVertexAI
 import json
 
 load_dotenv()
@@ -16,22 +16,7 @@ st.write("AI-powered resume screening and feedback tool.")
 uploaded_file = st.file_uploader("Upload Resume (PDF or DOCX)", type=["pdf", "docx"])
 jd = st.text_area("Paste Job Description", height=200)
 
-# Google Cloud Vertex AI setup
-gcp_project = os.getenv("GCP_PROJECT")
-gcp_location = os.getenv("GCP_LOCATION", "us-central1")
-model = "gemini-1.5-pro-preview-0409"  # or latest available
-aiplatform.init(project=gcp_project, location=gcp_location)
-endpoint = aiplatform.Endpoint(
-    endpoint_name=f"projects/{gcp_project}/locations/{gcp_location}/publishers/google/models/{model}"
-)
-
-def gemini_completion(prompt):
-    response = endpoint.predict(instances=[{"content": prompt}])
-    # The response format may vary; adjust as needed
-    try:
-        return response.predictions[0]["content"]
-    except Exception:
-        return "[Error: Could not parse Gemini response]"
+llm = ChatVertexAI(model="gemini-1.5-pro-preview-0409")
 
 if uploaded_file and jd:
     with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[-1]) as tmp_file:
@@ -44,7 +29,7 @@ if uploaded_file and jd:
     st.write(f"**Email:** {parsed.get('email', 'N/A')}")
     # Use Gemini to extract skills, education, experience
     extraction_prompt = f'''Extract the following from the resume text below. Return as JSON with keys: skills (list), education (string), experience (string).\nResume Text:\n{parsed['raw_text']}\n'''
-    extraction_content = gemini_completion(extraction_prompt)
+    extraction_content = llm.invoke(extraction_prompt)
     try:
         extracted = json.loads(extraction_content)
     except Exception:
@@ -57,7 +42,7 @@ if uploaded_file and jd:
     if not jd_skills:
         # Try to extract skills from JD using Gemini
         skill_prompt = f'''Extract a list of required skills from the following job description. Return as a Python list.\nJob Description:\n{jd}\n'''
-        skill_content = gemini_completion(skill_prompt)
+        skill_content = llm.invoke(skill_prompt)
         try:
             jd_skills = json.loads(skill_content)
         except Exception:
@@ -76,7 +61,7 @@ if uploaded_file and jd:
         'skills': extracted.get('skills', []),
         'education': extracted.get('education', ''),
         'experience': extracted.get('experience', '')
-    }, jd, missing, gemini_completion)
+    }, jd, missing)
     st.subheader("Improvement Suggestions")
     st.write(feedback)
     os.remove(tmp_path)
